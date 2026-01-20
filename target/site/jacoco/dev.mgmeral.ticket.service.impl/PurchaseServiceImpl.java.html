@@ -1,0 +1,187 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>PurchaseServiceImpl.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">ticket</a> &gt; <a href="index.source.html" class="el_package">dev.mgmeral.ticket.service.impl</a> &gt; <span class="el_source">PurchaseServiceImpl.java</span></div><h1>PurchaseServiceImpl.java</h1><pre class="source lang-java linenums">package dev.mgmeral.ticket.service.impl;
+
+import dev.mgmeral.ticket.exception.DuplicatePaymentRefException;
+import dev.mgmeral.ticket.entity.Hold;
+import dev.mgmeral.ticket.entity.Payment;
+import dev.mgmeral.ticket.entity.Purchase;
+import dev.mgmeral.ticket.enums.HoldStatus;
+import dev.mgmeral.ticket.enums.PaymentStatus;
+import dev.mgmeral.ticket.enums.PurchaseStatus;
+import dev.mgmeral.ticket.model.PurchaseCreateRequest;
+import dev.mgmeral.ticket.model.PurchaseCreateResult;
+import dev.mgmeral.ticket.model.PurchaseResponse;
+import dev.mgmeral.ticket.repository.HoldRepository;
+import dev.mgmeral.ticket.repository.PaymentRepository;
+import dev.mgmeral.ticket.repository.PurchaseRepository;
+import dev.mgmeral.ticket.service.PurchaseService;
+import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Timer;
+import jakarta.persistence.EntityNotFoundException;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.math.BigDecimal;
+import java.time.Instant;
+
+@Service
+@Transactional
+<span class="fc" id="L31">@Slf4j</span>
+public class PurchaseServiceImpl implements PurchaseService {
+<span class="fc" id="L33">    private static final BigDecimal UNIT_PRICE = new BigDecimal(&quot;100.00&quot;);</span>
+    private final Counter purchaseCreated;
+    private final Counter purchaseExisting;
+    private final Counter purchaseFailed;
+    private final Timer purchaseCreateTimer;
+
+    private final PurchaseRepository purchaseRepository;
+    private final HoldRepository holdRepository;
+    private final PaymentRepository paymentRepository;
+
+    public PurchaseServiceImpl(PurchaseRepository purchaseRepository,
+                               HoldRepository holdRepository,
+                               PaymentRepository paymentRepository,
+<span class="fc" id="L46">                               MeterRegistry registry) {</span>
+<span class="fc" id="L47">        this.purchaseRepository = purchaseRepository;</span>
+<span class="fc" id="L48">        this.holdRepository = holdRepository;</span>
+<span class="fc" id="L49">        this.paymentRepository = paymentRepository;</span>
+
+<span class="fc" id="L51">        this.purchaseCreated = registry.counter(&quot;purchase_created_total&quot;);</span>
+<span class="fc" id="L52">        this.purchaseExisting = registry.counter(&quot;purchase_existing_total&quot;);</span>
+<span class="fc" id="L53">        this.purchaseFailed = registry.counter(&quot;purchase_failed_total&quot;);</span>
+<span class="fc" id="L54">        this.purchaseCreateTimer = registry.timer(&quot;purchase_create_seconds&quot;);</span>
+<span class="fc" id="L55">    }</span>
+
+    @Override
+    public PurchaseCreateResult create(PurchaseCreateRequest request) {
+<span class="fc" id="L59">        final String idemKey = request.idempotencyKey();</span>
+<span class="fc" id="L60">        final String paymentRef = request.paymentRef();</span>
+<span class="fc" id="L61">        final Long holdIdReq = request.holdId();</span>
+
+<span class="fc" id="L63">        log.info(&quot;order.create.start idemKey={} paymentRef={} holdId={}&quot;, idemKey, paymentRef, holdIdReq);</span>
+
+<span class="fc" id="L65">        return purchaseCreateTimer.record(() -&gt; {</span>
+            try {
+<span class="fc" id="L67">                var existingByKey = purchaseRepository.findByIdempotencyKey(idemKey);</span>
+<span class="fc bfc" id="L68" title="All 2 branches covered.">                if (existingByKey.isPresent()) {</span>
+<span class="fc" id="L69">                    var ex = existingByKey.get();</span>
+<span class="fc" id="L70">                    purchaseExisting.increment();</span>
+<span class="fc" id="L71">                    log.info(&quot;order.idempotentHit orderId={} idemKey={} paymentRef={} holdId={} seanceId={}&quot;,</span>
+<span class="fc" id="L72">                            ex.getId(), ex.getIdempotencyKey(), ex.getPaymentRef(), ex.getHoldId(), ex.getSeanceId());</span>
+<span class="fc" id="L73">                    return PurchaseCreateResult.existing(toResponse(ex));</span>
+                }
+
+<span class="fc" id="L76">                Instant now = Instant.now();</span>
+
+<span class="fc" id="L78">                Payment payment = paymentRepository.findByPaymentRef(paymentRef)</span>
+<span class="fc" id="L79">                        .orElseThrow(() -&gt; new EntityNotFoundException(&quot;Payment not found: &quot; + paymentRef));</span>
+
+<span class="fc bfc" id="L81" title="All 2 branches covered.">                if (payment.getStatus() != PaymentStatus.AUTHORIZED) {</span>
+<span class="fc" id="L82">                    log.warn(&quot;order.create.paymentNotAuthorized idemKey={} paymentRef={} status={}&quot;,</span>
+<span class="fc" id="L83">                            idemKey, paymentRef, payment.getStatus());</span>
+<span class="fc" id="L84">                    throw new IllegalArgumentException(&quot;Payment not authorized: &quot; + paymentRef);</span>
+                }
+
+<span class="fc" id="L87">                Hold hold = holdRepository.findWithLockById(holdIdReq)</span>
+<span class="fc" id="L88">                        .orElseThrow(() -&gt; new EntityNotFoundException(&quot;Hold not found: &quot; + holdIdReq));</span>
+
+<span class="fc bfc" id="L90" title="All 2 branches covered.">                if (hold.getStatus() != HoldStatus.HELD) {</span>
+<span class="fc" id="L91">                    log.warn(&quot;order.create.holdNotHeld idemKey={} holdId={} status={} seanceId={} userId={}&quot;,</span>
+<span class="fc" id="L92">                            idemKey, hold.getId(), hold.getStatus(), hold.getSeanceId(), hold.getUserId());</span>
+<span class="fc" id="L93">                    throw new IllegalArgumentException(&quot;Hold not active. status=&quot; + hold.getStatus());</span>
+                }
+
+<span class="pc bpc" id="L96" title="1 of 4 branches missed.">                if (hold.getExpiresAt() != null &amp;&amp; hold.getExpiresAt().isBefore(now)) {</span>
+<span class="fc" id="L97">                    hold.setStatus(HoldStatus.EXPIRED);</span>
+<span class="fc" id="L98">                    hold.setReleasedAt(now);</span>
+<span class="fc" id="L99">                    holdRepository.save(hold);</span>
+
+<span class="fc" id="L101">                    log.warn(&quot;order.create.holdExpired idemKey={} holdId={} seanceId={} userId={} expiresAt={} now={}&quot;,</span>
+<span class="fc" id="L102">                            idemKey, hold.getId(), hold.getSeanceId(), hold.getUserId(), hold.getExpiresAt(), now);</span>
+
+<span class="fc" id="L104">                    throw new IllegalArgumentException(&quot;Hold expired: &quot; + hold.getId());</span>
+                }
+
+<span class="fc" id="L107">                BigDecimal expectedAmount = UNIT_PRICE.multiply(BigDecimal.valueOf(hold.getQuantity()));</span>
+<span class="fc bfc" id="L108" title="All 2 branches covered.">                if (payment.getAmount().compareTo(expectedAmount) != 0) {</span>
+<span class="fc" id="L109">                    log.warn(&quot;order.create.amountMismatch idemKey={} paymentRef={} holdId={} expected={} actual={}&quot;,</span>
+<span class="fc" id="L110">                            idemKey, paymentRef, hold.getId(), expectedAmount, payment.getAmount());</span>
+<span class="fc" id="L111">                    throw new IllegalArgumentException(</span>
+<span class="fc" id="L112">                            &quot;Payment amount mismatch. expected=&quot; + expectedAmount + &quot; actual=&quot; + payment.getAmount()</span>
+                    );
+                }
+
+<span class="fc" id="L116">                Purchase purchase = Purchase.builder()</span>
+<span class="fc" id="L117">                        .holdId(hold.getId())</span>
+<span class="fc" id="L118">                        .seanceId(hold.getSeanceId())</span>
+<span class="fc" id="L119">                        .userId(hold.getUserId())</span>
+<span class="fc" id="L120">                        .quantity(hold.getQuantity())</span>
+<span class="fc" id="L121">                        .amount(expectedAmount)</span>
+<span class="fc" id="L122">                        .paymentRef(payment.getPaymentRef())</span>
+<span class="fc" id="L123">                        .status(PurchaseStatus.SOLD)</span>
+<span class="fc" id="L124">                        .idempotencyKey(idemKey)</span>
+<span class="fc" id="L125">                        .build();</span>
+
+<span class="fc" id="L127">                Purchase saved = purchaseRepository.save(purchase);</span>
+
+<span class="fc" id="L129">                hold.setStatus(HoldStatus.CONSUMED);</span>
+<span class="fc" id="L130">                hold.setReleasedAt(now);</span>
+<span class="fc" id="L131">                holdRepository.save(hold);</span>
+
+<span class="fc" id="L133">                purchaseCreated.increment();</span>
+
+<span class="fc" id="L135">                log.info(&quot;order.created orderId={} idemKey={} holdId={} seanceId={} userId={} paymentRef={} amount={} qty={}&quot;,</span>
+<span class="fc" id="L136">                        saved.getId(), idemKey, hold.getId(), hold.getSeanceId(), hold.getUserId(),</span>
+<span class="fc" id="L137">                        payment.getPaymentRef(), expectedAmount, hold.getQuantity());</span>
+
+<span class="fc" id="L139">                return PurchaseCreateResult.created(toResponse(saved));</span>
+
+<span class="fc" id="L141">            } catch (DataIntegrityViolationException ex) {</span>
+<span class="fc" id="L142">                var byKey = purchaseRepository.findByIdempotencyKey(idemKey);</span>
+<span class="fc bfc" id="L143" title="All 2 branches covered.">                if (byKey.isPresent()) {</span>
+<span class="fc" id="L144">                    purchaseExisting.increment();</span>
+<span class="fc" id="L145">                    var p = byKey.get();</span>
+<span class="fc" id="L146">                    log.info(&quot;order.idempotentRecovered idemKey={} orderId={} paymentRef={}&quot;,</span>
+<span class="fc" id="L147">                            idemKey, p.getId(), p.getPaymentRef());</span>
+<span class="fc" id="L148">                    return PurchaseCreateResult.existing(toResponse(p));</span>
+                }
+
+<span class="fc" id="L151">                var byPayment = purchaseRepository.findByPaymentRef(paymentRef);</span>
+<span class="pc bpc" id="L152" title="1 of 2 branches missed.">                if (byPayment.isPresent()) {</span>
+<span class="fc" id="L153">                    purchaseFailed.increment();</span>
+<span class="fc" id="L154">                    log.warn(&quot;order.duplicatePaymentRef idemKey={} paymentRef={} existingOrderId={}&quot;,</span>
+<span class="fc" id="L155">                            idemKey, paymentRef, byPayment.get().getId());</span>
+<span class="fc" id="L156">                    throw new DuplicatePaymentRefException(byPayment.get().getId());</span>
+                }
+
+<span class="nc" id="L159">                purchaseFailed.increment();</span>
+<span class="nc" id="L160">                log.error(&quot;order.create.dbFailure idemKey={} paymentRef={} holdId={} err={}&quot;,</span>
+<span class="nc" id="L161">                        idemKey, paymentRef, holdIdReq, ex.toString(), ex);</span>
+<span class="nc" id="L162">                throw new IllegalStateException(&quot;Purchase save failed&quot;, ex);</span>
+
+<span class="fc" id="L164">            } catch (RuntimeException e) {</span>
+<span class="fc" id="L165">                purchaseFailed.increment();</span>
+<span class="fc" id="L166">                log.error(&quot;order.create.failed idemKey={} paymentRef={} holdId={} err={}&quot;,</span>
+<span class="fc" id="L167">                        idemKey, paymentRef, holdIdReq, e.toString(), e);</span>
+<span class="fc" id="L168">                throw e;</span>
+            }
+        });
+    }
+
+    private PurchaseResponse toResponse(Purchase p) {
+<span class="fc" id="L174">        return new PurchaseResponse(</span>
+<span class="fc" id="L175">                p.getId(),</span>
+<span class="fc" id="L176">                p.getHoldId(),</span>
+<span class="fc" id="L177">                p.getUserId(),</span>
+<span class="fc" id="L178">                p.getSeanceId(),</span>
+<span class="fc" id="L179">                p.getQuantity(),</span>
+<span class="fc" id="L180">                p.getAmount(),</span>
+<span class="fc" id="L181">                p.getPaymentRef(),</span>
+<span class="fc" id="L182">                p.getStatus(),</span>
+<span class="fc" id="L183">                p.getCreatedAt()</span>
+        );
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

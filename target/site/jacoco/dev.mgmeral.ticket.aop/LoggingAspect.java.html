@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>LoggingAspect.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">ticket</a> &gt; <a href="index.source.html" class="el_package">dev.mgmeral.ticket.aop</a> &gt; <span class="el_source">LoggingAspect.java</span></div><h1>LoggingAspect.java</h1><pre class="source lang-java linenums">package dev.mgmeral.ticket.aop;
+
+import org.aspectj.lang.ProceedingJoinPoint;
+import org.aspectj.lang.annotation.Around;
+import org.aspectj.lang.annotation.Aspect;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.stereotype.Component;
+
+@Aspect
+@Component
+<span class="nc" id="L12">public class LoggingAspect {</span>
+<span class="nc" id="L13">    private static final Logger log = LoggerFactory.getLogger(LoggingAspect.class);</span>
+
+    @Around(&quot;execution(* dev.mgmeral.ticket.service..*(..))&quot;)
+    public Object logServiceMethods(ProceedingJoinPoint pjp) throws Throwable {
+<span class="nc" id="L17">        long start = System.currentTimeMillis();</span>
+<span class="nc" id="L18">        String sig = pjp.getSignature().toShortString();</span>
+
+        try {
+<span class="nc" id="L21">            Object result = pjp.proceed();</span>
+<span class="nc" id="L22">            long took = System.currentTimeMillis() - start;</span>
+<span class="nc" id="L23">            log.info(&quot;{} took={}ms&quot;, sig, took);</span>
+<span class="nc" id="L24">            return result;</span>
+<span class="nc" id="L25">        } catch (Throwable t) {</span>
+<span class="nc" id="L26">            long took = System.currentTimeMillis() - start;</span>
+<span class="nc" id="L27">            log.error(&quot;{} failed took={}ms err={}&quot;, sig, took, t.toString());</span>
+<span class="nc" id="L28">            throw t;</span>
+        }
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

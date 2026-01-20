@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>PerformerController.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">ticket</a> &gt; <a href="index.source.html" class="el_package">dev.mgmeral.ticket.controller</a> &gt; <span class="el_source">PerformerController.java</span></div><h1>PerformerController.java</h1><pre class="source lang-java linenums">package dev.mgmeral.ticket.controller;
+
+import dev.mgmeral.ticket.model.PerformerCreateRequest;
+import dev.mgmeral.ticket.model.PerformerResponse;
+import dev.mgmeral.ticket.model.PerformerUpdateRequest;
+import dev.mgmeral.ticket.service.PerformerService;
+import jakarta.validation.Valid;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.bind.annotation.*;
+
+@RestController
+@RequestMapping(&quot;/performers&quot;)
+public class PerformerController {
+
+
+    private final PerformerService performerService;
+
+<span class="nc" id="L20">    public PerformerController(PerformerService performerService) {</span>
+<span class="nc" id="L21">        this.performerService = performerService;</span>
+<span class="nc" id="L22">    }</span>
+
+    @PostMapping
+    @ResponseStatus(HttpStatus.CREATED)
+    public PerformerResponse create(@Valid @RequestBody PerformerCreateRequest request) {
+<span class="nc" id="L27">        return performerService.create(request);</span>
+    }
+
+    @GetMapping(&quot;/{id}&quot;)
+    public PerformerResponse getById(@PathVariable Long id) {
+<span class="nc" id="L32">        return performerService.getById(id);</span>
+    }
+
+    @GetMapping
+    public Page&lt;PerformerResponse&gt; list(@RequestParam(required = false) String name,
+                                        Pageable pageable) {
+<span class="nc" id="L38">        return performerService.list(name, pageable);</span>
+    }
+
+    @PutMapping(&quot;/{id}&quot;)
+    public PerformerResponse update(@PathVariable Long id,
+                                    @Valid @RequestBody PerformerUpdateRequest request) {
+<span class="nc" id="L44">        return performerService.update(id, request);</span>
+    }
+
+    @DeleteMapping(&quot;/{id}&quot;)
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void delete(@PathVariable Long id) {
+<span class="nc" id="L50">        performerService.delete(id);</span>
+<span class="nc" id="L51">    }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

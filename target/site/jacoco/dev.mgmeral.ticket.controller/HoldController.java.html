@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>HoldController.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">ticket</a> &gt; <a href="index.source.html" class="el_package">dev.mgmeral.ticket.controller</a> &gt; <span class="el_source">HoldController.java</span></div><h1>HoldController.java</h1><pre class="source lang-java linenums">package dev.mgmeral.ticket.controller;
+
+import dev.mgmeral.ticket.model.HoldCreateRequest;
+import dev.mgmeral.ticket.model.HoldResponse;
+import dev.mgmeral.ticket.service.HoldService;
+import jakarta.validation.Valid;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.bind.annotation.*;
+
+@RestController
+@RequestMapping(&quot;/holds&quot;)
+public class HoldController {
+
+    private final HoldService holdService;
+
+<span class="nc" id="L16">    public HoldController(HoldService holdService) {</span>
+<span class="nc" id="L17">        this.holdService = holdService;</span>
+<span class="nc" id="L18">    }</span>
+
+    @PostMapping
+    @ResponseStatus(HttpStatus.CREATED)
+    public HoldResponse create(@Valid @RequestBody HoldCreateRequest request) {
+<span class="nc" id="L23">        return holdService.create(request);</span>
+    }
+
+    @GetMapping(&quot;/{holdId}&quot;)
+    public HoldResponse getById(@PathVariable Long holdId) {
+<span class="nc" id="L28">        return holdService.getById(holdId);</span>
+    }
+
+    @DeleteMapping(&quot;/{holdId}&quot;)
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void release(@PathVariable Long holdId) {
+<span class="nc" id="L34">        holdService.release(holdId);</span>
+<span class="nc" id="L35">    }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

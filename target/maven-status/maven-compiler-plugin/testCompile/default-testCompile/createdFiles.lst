@@ -1,0 +1,6 @@
+dev\mgmeral\ticket\service\impl\HoldServiceImplTest.class
+dev\mgmeral\ticket\service\impl\EventServiceImplTest.class
+dev\mgmeral\ticket\service\impl\PaymentServiceImplTest.class
+dev\mgmeral\ticket\service\impl\SeanceServiceImplTest.class
+dev\mgmeral\ticket\service\impl\PerformerServiceImplTest.class
+dev\mgmeral\ticket\service\impl\PurchaseServiceImplTest.class

@@ -1,0 +1,191 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>HoldServiceImpl.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">ticket</a> &gt; <a href="index.source.html" class="el_package">dev.mgmeral.ticket.service.impl</a> &gt; <span class="el_source">HoldServiceImpl.java</span></div><h1>HoldServiceImpl.java</h1><pre class="source lang-java linenums">package dev.mgmeral.ticket.service.impl;
+
+import dev.mgmeral.ticket.entity.Hold;
+import dev.mgmeral.ticket.entity.Seance;
+import dev.mgmeral.ticket.enums.HoldStatus;
+import dev.mgmeral.ticket.model.HoldCreateRequest;
+import dev.mgmeral.ticket.model.HoldResponse;
+import dev.mgmeral.ticket.repository.HoldRepository;
+import dev.mgmeral.ticket.repository.PurchaseRepository;
+import dev.mgmeral.ticket.repository.SeanceRepository;
+import dev.mgmeral.ticket.service.HoldService;
+import jakarta.persistence.EntityNotFoundException;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.math.BigDecimal;
+import java.time.Duration;
+import java.time.Instant;
+
+import static dev.mgmeral.ticket.enums.PurchaseStatus.SOLD;
+
+@Service
+@Transactional
+<span class="fc" id="L26">@Slf4j</span>
+public class HoldServiceImpl implements HoldService {
+
+<span class="fc" id="L29">    private static final Duration HOLD_TTL = Duration.ofMinutes(5);</span>
+<span class="fc" id="L30">    private static final BigDecimal UNIT_PRICE = BigDecimal.valueOf(100);</span>
+
+    private final HoldRepository holdRepository;
+    private final SeanceRepository seanceRepository;
+    private final PurchaseRepository purchaseRepository;
+
+<span class="fc" id="L36">    public HoldServiceImpl(HoldRepository holdRepository, SeanceRepository seanceRepository, PurchaseRepository purchaseRepository) {</span>
+<span class="fc" id="L37">        this.holdRepository = holdRepository;</span>
+<span class="fc" id="L38">        this.seanceRepository = seanceRepository;</span>
+<span class="fc" id="L39">        this.purchaseRepository = purchaseRepository;</span>
+<span class="fc" id="L40">    }</span>
+
+    @Override
+    public HoldResponse create(HoldCreateRequest request) {
+<span class="fc" id="L44">        Instant now = Instant.now();</span>
+
+<span class="fc" id="L46">        log.info(&quot;hold.create.start seanceId={} userId={} qty={} idemKey={}&quot;,</span>
+<span class="fc" id="L47">                request.seanceId(), request.userId(), request.quantity(), request.idempotencyKey());</span>
+
+<span class="fc" id="L49">        var existing = holdRepository.findByIdempotencyKey(request.idempotencyKey());</span>
+<span class="fc bfc" id="L50" title="All 2 branches covered.">        if (existing.isPresent()) {</span>
+<span class="fc" id="L51">            Hold h = existing.get();</span>
+<span class="fc" id="L52">            boolean expiredNow = expireIfNeeded(h, now);</span>
+<span class="pc bpc" id="L53" title="1 of 2 branches missed.">            if (expiredNow) {</span>
+<span class="nc" id="L54">                holdRepository.save(h);</span>
+<span class="nc" id="L55">                log.info(&quot;hold.create.idempotentExpired holdId={} seanceId={} userId={} expiresAt={} now={}&quot;,</span>
+<span class="nc" id="L56">                        h.getId(), h.getSeanceId(), h.getUserId(), h.getExpiresAt(), now);</span>
+            } else {
+<span class="fc" id="L58">                log.info(&quot;hold.create.idempotentHit holdId={} seanceId={} userId={} status={} expiresAt={}&quot;,</span>
+<span class="fc" id="L59">                        h.getId(), h.getSeanceId(), h.getUserId(), h.getStatus(), h.getExpiresAt());</span>
+            }
+<span class="fc" id="L61">            return toResponse(h);</span>
+        }
+
+
+<span class="fc" id="L65">        Seance seance = seanceRepository.findWithLockById(request.seanceId())</span>
+<span class="fc" id="L66">                .orElseThrow(() -&gt; new EntityNotFoundException(&quot;Seance not found: &quot; + request.seanceId()));</span>
+
+<span class="fc" id="L68">        long activeHeld = holdRepository.sumActiveQuantity(seance.getId(), HoldStatus.HELD, now);</span>
+<span class="fc" id="L69">        long soldCount = purchaseRepository.sumQuantityBySeanceAndStatus(seance.getId(), SOLD);</span>
+
+<span class="fc" id="L71">        long available = (long) seance.getCapacity() - soldCount - activeHeld;</span>
+
+<span class="fc" id="L73">        log.debug(&quot;hold.create.availability seanceId={} capacity={} sold={} activeHeld={} available={}&quot;,</span>
+<span class="fc" id="L74">                seance.getId(), seance.getCapacity(), soldCount, activeHeld, available);</span>
+
+<span class="fc bfc" id="L76" title="All 2 branches covered.">        if (request.quantity() &gt; available) {</span>
+<span class="fc" id="L77">            log.warn(&quot;hold.create.insufficientCapacity seanceId={} requested={} available={} userId={}&quot;,</span>
+<span class="fc" id="L78">                    seance.getId(), request.quantity(), available, request.userId());</span>
+<span class="fc" id="L79">            throw new IllegalArgumentException(&quot;Insufficient capacity. available=&quot; + available);</span>
+        }
+
+<span class="fc" id="L82">        Hold hold = Hold.builder()</span>
+<span class="fc" id="L83">                .userId(request.userId())</span>
+<span class="fc" id="L84">                .seanceId(seance.getId())</span>
+<span class="fc" id="L85">                .quantity(request.quantity())</span>
+<span class="fc" id="L86">                .status(HoldStatus.HELD)</span>
+<span class="fc" id="L87">                .idempotencyKey(request.idempotencyKey())</span>
+<span class="fc" id="L88">                .expiresAt(now.plus(HOLD_TTL))</span>
+<span class="fc" id="L89">                .build();</span>
+
+        try {
+<span class="fc" id="L92">            Hold saved = holdRepository.save(hold);</span>
+
+<span class="fc" id="L94">            log.info(&quot;hold.created holdId={} seanceId={} userId={} qty={} expiresAt={}&quot;,</span>
+<span class="fc" id="L95">                    saved.getId(), saved.getSeanceId(), saved.getUserId(), saved.getQuantity(), saved.getExpiresAt());</span>
+
+<span class="fc" id="L97">            return toResponse(saved);</span>
+
+<span class="fc" id="L99">        } catch (DataIntegrityViolationException dupKey) {</span>
+<span class="fc" id="L100">            Hold same = holdRepository.findByIdempotencyKey(request.idempotencyKey())</span>
+<span class="fc" id="L101">                    .orElseThrow(() -&gt; dupKey);</span>
+
+<span class="fc" id="L103">            boolean expiredNow = expireIfNeeded(same, now);</span>
+<span class="pc bpc" id="L104" title="1 of 2 branches missed.">            if (expiredNow) {</span>
+<span class="nc" id="L105">                holdRepository.save(same);</span>
+            }
+
+<span class="fc" id="L108">            log.info(&quot;hold.create.dupRecovered holdId={} seanceId={} userId={} status={} expiresAt={}&quot;,</span>
+<span class="fc" id="L109">                    same.getId(), same.getSeanceId(), same.getUserId(), same.getStatus(), same.getExpiresAt());</span>
+
+<span class="fc" id="L111">            return toResponse(same);</span>
+        }
+    }
+
+    @Override
+    public HoldResponse getById(Long holdId) {
+<span class="fc" id="L117">        Instant now = Instant.now();</span>
+<span class="fc" id="L118">        Hold hold = holdRepository.findById(holdId)</span>
+<span class="fc" id="L119">                .orElseThrow(() -&gt; new EntityNotFoundException(&quot;Hold not found: &quot; + holdId));</span>
+
+<span class="fc" id="L121">        boolean expiredNow = expireIfNeeded(hold, now);</span>
+<span class="pc bpc" id="L122" title="1 of 2 branches missed.">        if (expiredNow) {</span>
+<span class="nc" id="L123">            holdRepository.save(hold);</span>
+<span class="nc" id="L124">            log.info(&quot;hold.get.expiredLazy holdId={} seanceId={} userId={} now={}&quot;,</span>
+<span class="nc" id="L125">                    hold.getId(), hold.getSeanceId(), hold.getUserId(), now);</span>
+        } else {
+<span class="fc" id="L127">            log.debug(&quot;hold.get.ok holdId={} seanceId={} userId={} status={} expiresAt={}&quot;,</span>
+<span class="fc" id="L128">                    hold.getId(), hold.getSeanceId(), hold.getUserId(), hold.getStatus(), hold.getExpiresAt());</span>
+        }
+
+<span class="fc" id="L131">        return toResponse(hold);</span>
+    }
+
+    @Override
+    public void release(Long holdId) {
+<span class="fc" id="L136">        Instant now = Instant.now();</span>
+<span class="fc" id="L137">        Hold hold = holdRepository.findWithLockById(holdId)</span>
+<span class="fc" id="L138">                .orElseThrow(() -&gt; new EntityNotFoundException(&quot;Hold not found: &quot; + holdId));</span>
+
+<span class="fc" id="L140">        boolean expiredNow = expireIfNeeded(hold, now);</span>
+<span class="pc bpc" id="L141" title="1 of 2 branches missed.">        if (expiredNow) {</span>
+<span class="nc" id="L142">            holdRepository.save(hold);</span>
+<span class="nc" id="L143">            log.info(&quot;hold.release.expiredLazy holdId={} seanceId={} userId={} now={}&quot;,</span>
+<span class="nc" id="L144">                    hold.getId(), hold.getSeanceId(), hold.getUserId(), now);</span>
+<span class="nc" id="L145">            return;</span>
+        }
+
+<span class="fc bfc" id="L148" title="All 2 branches covered.">        if (hold.getStatus() != HoldStatus.HELD) {</span>
+<span class="fc" id="L149">            log.info(&quot;hold.release.noop holdId={} status={} seanceId={} userId={}&quot;,</span>
+<span class="fc" id="L150">                    holdId, hold.getStatus(), hold.getSeanceId(), hold.getUserId());</span>
+<span class="fc" id="L151">            return;</span>
+        }
+
+<span class="fc" id="L154">        hold.setStatus(HoldStatus.RELEASED);</span>
+<span class="fc" id="L155">        hold.setReleasedAt(now);</span>
+<span class="fc" id="L156">        holdRepository.save(hold);</span>
+
+<span class="fc" id="L158">        log.info(&quot;hold.released holdId={} seanceId={} userId={} at={}&quot;,</span>
+<span class="fc" id="L159">                holdId, hold.getSeanceId(), hold.getUserId(), now);</span>
+<span class="fc" id="L160">    }</span>
+
+    @Override
+    public boolean expireIfNeeded(Hold hold, Instant now) {
+<span class="fc bfc" id="L164" title="All 2 branches covered.">        if (hold.getStatus() == HoldStatus.HELD</span>
+<span class="fc bfc" id="L165" title="All 2 branches covered.">                &amp;&amp; hold.getExpiresAt() != null</span>
+<span class="pc bpc" id="L166" title="1 of 2 branches missed.">                &amp;&amp; !hold.getExpiresAt().isAfter(now)) {</span>
+
+<span class="nc" id="L168">            hold.setStatus(HoldStatus.EXPIRED);</span>
+
+<span class="nc bnc" id="L170" title="All 2 branches missed.">            if (hold.getReleasedAt() == null) {</span>
+<span class="nc" id="L171">                hold.setReleasedAt(now);</span>
+            }
+<span class="nc" id="L173">            return true;</span>
+        }
+<span class="fc" id="L175">        return false;</span>
+    }
+
+    private HoldResponse toResponse(Hold h) {
+<span class="fc" id="L179">        BigDecimal total = UNIT_PRICE.multiply(BigDecimal.valueOf(h.getQuantity()));</span>
+<span class="fc" id="L180">        return new HoldResponse(</span>
+<span class="fc" id="L181">                h.getId(),</span>
+<span class="fc" id="L182">                h.getUserId(),</span>
+<span class="fc" id="L183">                h.getSeanceId(),</span>
+<span class="fc" id="L184">                h.getQuantity(),</span>
+<span class="fc" id="L185">                h.getStatus(),</span>
+<span class="fc" id="L186">                h.getExpiresAt(),</span>
+                total
+        );
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

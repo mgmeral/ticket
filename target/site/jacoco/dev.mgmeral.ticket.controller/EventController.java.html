@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>EventController.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">ticket</a> &gt; <a href="index.source.html" class="el_package">dev.mgmeral.ticket.controller</a> &gt; <span class="el_source">EventController.java</span></div><h1>EventController.java</h1><pre class="source lang-java linenums">package dev.mgmeral.ticket.controller;
+
+import dev.mgmeral.ticket.model.*;
+import dev.mgmeral.ticket.model.*;
+import dev.mgmeral.ticket.service.EventService;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.Min;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableDefault;
+import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.bind.annotation.*;
+
+import java.time.Instant;
+
+@RestController
+@RequestMapping(&quot;/events&quot;)
+public class EventController {
+
+    private final EventService eventService;
+
+<span class="nc" id="L23">    public EventController(EventService eventService) {</span>
+<span class="nc" id="L24">        this.eventService = eventService;</span>
+<span class="nc" id="L25">    }</span>
+
+    @PostMapping
+    @ResponseStatus(HttpStatus.CREATED)
+    public EventCreateResponse create(@Valid @RequestBody EventCreateRequest request) {
+<span class="nc" id="L30">        return eventService.create(request);</span>
+    }
+
+    @GetMapping(&quot;/{id}&quot;)
+    public EventGetResponse getById(@PathVariable @Min(1) Long id) {
+<span class="nc" id="L35">        return eventService.getById(id);</span>
+    }
+
+    @PutMapping(&quot;/{id}&quot;)
+    public EventUpdateResponse update(
+            @PathVariable @Min(1) Long id,
+            @Valid @RequestBody EventUpdateRequest request
+    ) {
+<span class="nc" id="L43">        return eventService.update(id, request);</span>
+    }
+
+    @DeleteMapping(&quot;/{id}&quot;)
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void delete(@PathVariable @Min(1) Long id) {
+<span class="nc" id="L49">        eventService.delete(id);</span>
+<span class="nc" id="L50">    }</span>
+
+    @GetMapping
+    public Page&lt;EventSearchResponse&gt; search(
+            @RequestParam(required = false) String type,
+            @RequestParam(required = false) String name,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant startFrom,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant startTo,
+            @PageableDefault(size = 20) Pageable pageable) {
+<span class="nc" id="L59">        return eventService.search(type, name, startFrom, startTo, pageable);</span>
+    }
+
+    @PutMapping(&quot;/{id}/performers&quot;)
+    public EventUpdateResponse updatePerformers(
+            @PathVariable @Min(1) Long id,
+            @Valid @RequestBody EventPerformerUpdateRequest request
+    ) {
+<span class="nc" id="L67">        return eventService.updatePerformers(id, request);</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

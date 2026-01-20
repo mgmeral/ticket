@@ -1,0 +1,197 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>EventServiceImpl.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">ticket</a> &gt; <a href="index.source.html" class="el_package">dev.mgmeral.ticket.service.impl</a> &gt; <span class="el_source">EventServiceImpl.java</span></div><h1>EventServiceImpl.java</h1><pre class="source lang-java linenums">package dev.mgmeral.ticket.service.impl;
+
+import dev.mgmeral.ticket.entity.Event;
+import dev.mgmeral.ticket.enums.EventType;
+import dev.mgmeral.ticket.mapper.EventMapper;
+import dev.mgmeral.ticket.model.*;
+import dev.mgmeral.ticket.model.*;
+import dev.mgmeral.ticket.repository.EventRepository;
+import dev.mgmeral.ticket.repository.PerformerRepository;
+import dev.mgmeral.ticket.repository.spec.EventSpecifications;
+import dev.mgmeral.ticket.service.EventService;
+import jakarta.persistence.EntityNotFoundException;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.time.Instant;
+import java.util.HashSet;
+import java.util.Set;
+
+@Transactional
+@Service
+<span class="fc" id="L26">@Slf4j</span>
+public class EventServiceImpl implements EventService {
+    private final EventRepository eventRepository;
+    private final EventMapper eventMapper;
+    private final PerformerRepository performerRepository;
+
+<span class="fc" id="L32">    public EventServiceImpl(EventRepository eventRepository, EventMapper eventMapper, PerformerRepository performerRepository) {</span>
+<span class="fc" id="L33">        this.eventRepository = eventRepository;</span>
+<span class="fc" id="L34">        this.eventMapper = eventMapper;</span>
+<span class="fc" id="L35">        this.performerRepository = performerRepository;</span>
+<span class="fc" id="L36">    }</span>
+
+    private static String safe(Object o) {
+<span class="fc bfc" id="L39" title="All 2 branches covered.">        return o == null ? null : String.valueOf(o);</span>
+    }
+
+    @Override
+    public EventCreateResponse create(EventCreateRequest request) {
+<span class="fc" id="L44">        Event event = eventMapper.toEntity(request);</span>
+
+<span class="fc" id="L46">        log.info(&quot;event.create.start name={} type={} startDate={} performerIdsCount={}&quot;,</span>
+<span class="fc" id="L47">                safe(request.name()),</span>
+<span class="fc" id="L48">                safe(request.type()),</span>
+<span class="fc" id="L49">                request.startDate(),</span>
+<span class="pc bpc" id="L50" title="1 of 2 branches missed.">                request.performerIds() == null ? 0 : request.performerIds().size());</span>
+
+<span class="fc" id="L52">        applyPerformers(event, request.performerIds());</span>
+<span class="fc" id="L53">        event = eventRepository.save(event);</span>
+
+<span class="fc" id="L55">        log.info(&quot;event.create.ok eventId={} name={} type={} startDate={} performersCount={}&quot;,</span>
+<span class="fc" id="L56">                event.getId(),</span>
+<span class="fc" id="L57">                safe(event.getName()),</span>
+<span class="fc" id="L58">                event.getType(),</span>
+<span class="fc" id="L59">                event.getStartDate(),</span>
+<span class="pc bpc" id="L60" title="1 of 2 branches missed.">                event.getPerformers() == null ? 0 : event.getPerformers().size());</span>
+
+<span class="fc" id="L62">        return eventMapper.toCreateResponse(event);</span>
+    }
+
+    @Override
+    public EventGetResponse getById(Long id) {
+<span class="fc" id="L67">        log.debug(&quot;event.getById.start eventId={}&quot;, id);</span>
+
+<span class="fc" id="L69">        Event event = eventRepository.findById(id)</span>
+<span class="fc" id="L70">                .orElseThrow(() -&gt; new EntityNotFoundException(&quot;Event not found: &quot; + id));</span>
+
+<span class="fc" id="L72">        log.debug(&quot;event.getById.ok eventId={} name={} type={}&quot;, event.getId(), safe(event.getName()), event.getType());</span>
+<span class="fc" id="L73">        return eventMapper.toGetResponse(event);</span>
+    }
+
+    @Override
+    public EventUpdateResponse update(Long id, EventUpdateRequest request) {
+<span class="fc" id="L78">        log.info(&quot;event.update.start eventId={} name={} type={} startDate={} performerIdsProvided={}&quot;,</span>
+                id,
+<span class="fc" id="L80">                safe(request.name()),</span>
+<span class="fc" id="L81">                safe(request.type()),</span>
+<span class="fc" id="L82">                request.startDate(),</span>
+<span class="pc bpc" id="L83" title="1 of 2 branches missed.">                request.performerIds() != null);</span>
+
+<span class="fc" id="L85">        Event event = eventRepository.findById(id)</span>
+<span class="fc" id="L86">                .orElseThrow(() -&gt; new EntityNotFoundException(&quot;Event not found: &quot; + id));</span>
+
+<span class="fc" id="L88">        eventMapper.updateEntity(event, request);</span>
+<span class="pc bpc" id="L89" title="1 of 2 branches missed.">        if (request.performerIds() != null) {</span>
+<span class="fc" id="L90">            applyPerformers(event, request.performerIds());</span>
+        }
+
+<span class="fc" id="L93">        Event saved = eventRepository.save(event);</span>
+
+<span class="fc" id="L95">        log.info(&quot;event.update.ok eventId={} name={} type={} startDate={} performersCount={}&quot;,</span>
+<span class="fc" id="L96">                saved.getId(),</span>
+<span class="fc" id="L97">                safe(saved.getName()),</span>
+<span class="fc" id="L98">                saved.getType(),</span>
+<span class="fc" id="L99">                saved.getStartDate(),</span>
+<span class="pc bpc" id="L100" title="1 of 2 branches missed.">                saved.getPerformers() == null ? 0 : saved.getPerformers().size());</span>
+
+<span class="fc" id="L102">        return eventMapper.toUpdateResponse(saved);</span>
+    }
+
+    @Override
+    public void delete(Long id) {
+<span class="fc" id="L107">        log.info(&quot;event.delete.start eventId={}&quot;, id);</span>
+
+<span class="fc bfc" id="L109" title="All 2 branches covered.">        if (!eventRepository.existsById(id)) {</span>
+<span class="fc" id="L110">            log.warn(&quot;event.delete.notFound eventId={}&quot;, id);</span>
+<span class="fc" id="L111">            throw new EntityNotFoundException(&quot;Event not found: &quot; + id);</span>
+        }
+
+<span class="fc" id="L114">        eventRepository.deleteById(id);</span>
+<span class="fc" id="L115">        log.info(&quot;event.delete.ok eventId={}&quot;, id);</span>
+<span class="fc" id="L116">    }</span>
+
+    @Override
+    public Page&lt;EventSearchResponse&gt; search(String type, String name, Instant startFrom, Instant startTo, Pageable pageable) {
+<span class="fc" id="L120">        log.debug(&quot;event.search params type={} name={} startFrom={} startTo={} page={} size={} sort={}&quot;,</span>
+<span class="fc" id="L121">                safe(type), safe(name), startFrom, startTo,</span>
+<span class="pc bpc" id="L122" title="1 of 2 branches missed.">                pageable == null ? null : pageable.getPageNumber(),</span>
+<span class="pc bpc" id="L123" title="1 of 2 branches missed.">                pageable == null ? null : pageable.getPageSize(),</span>
+<span class="pc bpc" id="L124" title="1 of 2 branches missed.">                pageable == null ? null : pageable.getSort());</span>
+
+<span class="fc" id="L126">        Specification&lt;Event&gt; spec = Specification.where(null);</span>
+
+<span class="fc bfc" id="L128" title="All 4 branches covered.">        if (type != null &amp;&amp; !type.isBlank()) {</span>
+<span class="fc" id="L129">            EventType eventType = EventType.valueOf(type.trim().toUpperCase());</span>
+<span class="fc" id="L130">            spec = spec.and(EventSpecifications.typeEquals(eventType));</span>
+        }
+<span class="fc bfc" id="L132" title="All 4 branches covered.">        if (name != null &amp;&amp; !name.isBlank()) {</span>
+<span class="fc" id="L133">            spec = spec.and(EventSpecifications.nameContains(name.trim()));</span>
+        }
+<span class="fc bfc" id="L135" title="All 2 branches covered.">        if (startFrom != null) {</span>
+<span class="fc" id="L136">            spec = spec.and(EventSpecifications.startDateGte(startFrom));</span>
+        }
+<span class="fc bfc" id="L138" title="All 2 branches covered.">        if (startTo != null) {</span>
+<span class="fc" id="L139">            spec = spec.and(EventSpecifications.startDateLte(startTo));</span>
+        }
+
+<span class="fc" id="L142">        Page&lt;EventSearchResponse&gt; page = eventRepository.findAll(spec, pageable)</span>
+<span class="fc" id="L143">                .map(eventMapper::toSearchResponse);</span>
+
+<span class="fc" id="L145">        log.debug(&quot;event.search.result totalElements={} totalPages={} pageNumber={}&quot;,</span>
+<span class="fc" id="L146">                page.getTotalElements(), page.getTotalPages(), page.getNumber());</span>
+
+<span class="fc" id="L148">        return page;</span>
+    }
+
+    @Override
+    public EventUpdateResponse updatePerformers(Long eventId, EventPerformerUpdateRequest request) {
+<span class="nc" id="L153">        log.info(&quot;event.updatePerformers.start eventId={} performerIdsCount={}&quot;,</span>
+<span class="nc bnc" id="L154" title="All 2 branches missed.">                eventId, request.performerIds() == null ? 0 : request.performerIds().size());</span>
+
+<span class="nc" id="L156">        Event event = eventRepository.findById(eventId)</span>
+<span class="nc" id="L157">                .orElseThrow(() -&gt; new EntityNotFoundException(&quot;Event not found: &quot; + eventId));</span>
+
+<span class="nc" id="L159">        applyPerformers(event, request.performerIds());</span>
+<span class="nc" id="L160">        Event saved = eventRepository.save(event);</span>
+
+<span class="nc" id="L162">        log.info(&quot;event.updatePerformers.ok eventId={} performersCount={}&quot;,</span>
+<span class="nc bnc" id="L163" title="All 2 branches missed.">                saved.getId(), saved.getPerformers() == null ? 0 : saved.getPerformers().size());</span>
+
+<span class="nc" id="L165">        return eventMapper.toUpdateResponse(saved);</span>
+    }
+
+    private void applyPerformers(Event event, Set&lt;Long&gt; performerIds) {
+<span class="pc bpc" id="L169" title="1 of 2 branches missed.">        int requested = performerIds == null ? 0 : performerIds.size();</span>
+<span class="fc" id="L170">        log.debug(&quot;event.applyPerformers.start eventId={} performerIdsCount={}&quot;, event.getId(), requested);</span>
+
+<span class="pc bpc" id="L172" title="2 of 4 branches missed.">        if (performerIds == null || performerIds.isEmpty()) {</span>
+<span class="fc" id="L173">            event.getPerformers().clear();</span>
+<span class="fc" id="L174">            log.debug(&quot;event.applyPerformers.cleared eventId={}&quot;, event.getId());</span>
+<span class="fc" id="L175">            return;</span>
+        }
+
+<span class="nc" id="L178">        var performers = performerRepository.findAllById(performerIds);</span>
+<span class="nc bnc" id="L179" title="All 2 branches missed.">        if (performers.size() != performerIds.size()) {</span>
+<span class="nc" id="L180">            Set&lt;Long&gt; found = new HashSet&lt;&gt;();</span>
+<span class="nc bnc" id="L181" title="All 2 branches missed.">            for (var p : performers) found.add(p.getId());</span>
+
+<span class="nc" id="L183">            Set&lt;Long&gt; missing = new HashSet&lt;&gt;(performerIds);</span>
+<span class="nc" id="L184">            missing.removeAll(found);</span>
+
+<span class="nc" id="L186">            log.warn(&quot;event.applyPerformers.missing eventId={} missingPerformerIds={}&quot;, event.getId(), missing);</span>
+<span class="nc" id="L187">            throw new EntityNotFoundException(&quot;Performer(s) not found: &quot; + missing);</span>
+        }
+
+<span class="nc" id="L190">        event.getPerformers().clear();</span>
+<span class="nc" id="L191">        event.getPerformers().addAll(performers);</span>
+
+<span class="nc" id="L193">        log.debug(&quot;event.applyPerformers.ok eventId={} performersCount={}&quot;,</span>
+<span class="nc" id="L194">                event.getId(), event.getPerformers().size());</span>
+<span class="nc" id="L195">    }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

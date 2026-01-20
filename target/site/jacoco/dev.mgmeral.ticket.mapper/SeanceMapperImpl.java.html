@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>SeanceMapperImpl.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">ticket</a> &gt; <a href="index.source.html" class="el_package">dev.mgmeral.ticket.mapper</a> &gt; <span class="el_source">SeanceMapperImpl.java</span></div><h1>SeanceMapperImpl.java</h1><pre class="source lang-java linenums">package dev.mgmeral.ticket.mapper;
+
+import dev.mgmeral.ticket.entity.Seance;
+import dev.mgmeral.ticket.model.SeanceCreateRequest;
+import dev.mgmeral.ticket.model.SeanceCreateResponse;
+import dev.mgmeral.ticket.model.SeanceGetResponse;
+import java.time.Instant;
+import javax.annotation.processing.Generated;
+import org.springframework.stereotype.Component;
+
+@Generated(
+    value = &quot;org.mapstruct.ap.MappingProcessor&quot;,
+    date = &quot;2026-01-20T03:23:42+0300&quot;,
+    comments = &quot;version: 1.5.5.Final, compiler: javac, environment: Java 21 (Oracle Corporation)&quot;
+)
+@Component
+<span class="nc" id="L17">public class SeanceMapperImpl implements SeanceMapper {</span>
+
+    @Override
+    public Seance toEntity(Long eventId, SeanceCreateRequest request) {
+<span class="nc bnc" id="L21" title="All 4 branches missed.">        if ( eventId == null &amp;&amp; request == null ) {</span>
+<span class="nc" id="L22">            return null;</span>
+        }
+
+<span class="nc" id="L25">        Seance seance = new Seance();</span>
+
+<span class="nc bnc" id="L27" title="All 2 branches missed.">        if ( request != null ) {</span>
+<span class="nc" id="L28">            seance.setStartDate( request.startDateTime() );</span>
+<span class="nc" id="L29">            seance.setCapacity( request.capacity() );</span>
+        }
+<span class="nc" id="L31">        seance.setEventId( eventId );</span>
+
+<span class="nc" id="L33">        return seance;</span>
+    }
+
+    @Override
+    public SeanceCreateResponse toCreateResponse(Seance seance) {
+<span class="nc bnc" id="L38" title="All 2 branches missed.">        if ( seance == null ) {</span>
+<span class="nc" id="L39">            return null;</span>
+        }
+
+<span class="nc" id="L42">        Instant startDateTime = null;</span>
+<span class="nc" id="L43">        Long id = null;</span>
+<span class="nc" id="L44">        Long eventId = null;</span>
+<span class="nc" id="L45">        int capacity = 0;</span>
+
+<span class="nc" id="L47">        startDateTime = seance.getStartDate();</span>
+<span class="nc" id="L48">        id = seance.getId();</span>
+<span class="nc" id="L49">        eventId = seance.getEventId();</span>
+<span class="nc" id="L50">        capacity = seance.getCapacity();</span>
+
+<span class="nc" id="L52">        SeanceCreateResponse seanceCreateResponse = new SeanceCreateResponse( id, eventId, startDateTime, capacity );</span>
+
+<span class="nc" id="L54">        return seanceCreateResponse;</span>
+    }
+
+    @Override
+    public SeanceGetResponse toGetResponse(Seance seance) {
+<span class="nc bnc" id="L59" title="All 2 branches missed.">        if ( seance == null ) {</span>
+<span class="nc" id="L60">            return null;</span>
+        }
+
+<span class="nc" id="L63">        Instant startDateTime = null;</span>
+<span class="nc" id="L64">        Long id = null;</span>
+<span class="nc" id="L65">        Long eventId = null;</span>
+<span class="nc" id="L66">        int capacity = 0;</span>
+
+<span class="nc" id="L68">        startDateTime = seance.getStartDate();</span>
+<span class="nc" id="L69">        id = seance.getId();</span>
+<span class="nc" id="L70">        eventId = seance.getEventId();</span>
+<span class="nc" id="L71">        capacity = seance.getCapacity();</span>
+
+<span class="nc" id="L73">        SeanceGetResponse seanceGetResponse = new SeanceGetResponse( id, eventId, startDateTime, capacity );</span>
+
+<span class="nc" id="L75">        return seanceGetResponse;</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

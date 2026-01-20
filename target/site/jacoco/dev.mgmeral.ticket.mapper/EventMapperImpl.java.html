@@ -1,0 +1,173 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>EventMapperImpl.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">ticket</a> &gt; <a href="index.source.html" class="el_package">dev.mgmeral.ticket.mapper</a> &gt; <span class="el_source">EventMapperImpl.java</span></div><h1>EventMapperImpl.java</h1><pre class="source lang-java linenums">package dev.mgmeral.ticket.mapper;
+
+import dev.mgmeral.ticket.entity.Event;
+import dev.mgmeral.ticket.enums.EventType;
+import dev.mgmeral.ticket.model.EventCreateRequest;
+import dev.mgmeral.ticket.model.EventCreateResponse;
+import dev.mgmeral.ticket.model.EventGetResponse;
+import dev.mgmeral.ticket.model.EventSearchResponse;
+import dev.mgmeral.ticket.model.EventUpdateRequest;
+import dev.mgmeral.ticket.model.EventUpdateResponse;
+import java.time.Instant;
+import javax.annotation.processing.Generated;
+import org.springframework.stereotype.Component;
+
+@Generated(
+    value = &quot;org.mapstruct.ap.MappingProcessor&quot;,
+    date = &quot;2026-01-20T03:23:43+0300&quot;,
+    comments = &quot;version: 1.5.5.Final, compiler: javac, environment: Java 21 (Oracle Corporation)&quot;
+)
+@Component
+<span class="nc" id="L21">public class EventMapperImpl implements EventMapper {</span>
+
+    @Override
+    public Event toEntity(EventCreateRequest request) {
+<span class="nc bnc" id="L25" title="All 2 branches missed.">        if ( request == null ) {</span>
+<span class="nc" id="L26">            return null;</span>
+        }
+
+<span class="nc" id="L29">        Event event = new Event();</span>
+
+<span class="nc" id="L31">        event.setType( request.type() );</span>
+<span class="nc" id="L32">        event.setName( request.name() );</span>
+<span class="nc" id="L33">        event.setDescription( request.description() );</span>
+<span class="nc" id="L34">        event.setSummary( request.summary() );</span>
+<span class="nc" id="L35">        event.setStartDate( request.startDate() );</span>
+<span class="nc" id="L36">        event.setEndDate( request.endDate() );</span>
+
+<span class="nc" id="L38">        return event;</span>
+    }
+
+    @Override
+    public EventCreateResponse toCreateResponse(Event event) {
+<span class="nc bnc" id="L43" title="All 2 branches missed.">        if ( event == null ) {</span>
+<span class="nc" id="L44">            return null;</span>
+        }
+
+<span class="nc" id="L47">        Long id = null;</span>
+<span class="nc" id="L48">        EventType type = null;</span>
+<span class="nc" id="L49">        String name = null;</span>
+<span class="nc" id="L50">        String description = null;</span>
+<span class="nc" id="L51">        String summary = null;</span>
+<span class="nc" id="L52">        Instant startDate = null;</span>
+<span class="nc" id="L53">        Instant endDate = null;</span>
+
+<span class="nc" id="L55">        id = event.getId();</span>
+<span class="nc" id="L56">        type = event.getType();</span>
+<span class="nc" id="L57">        name = event.getName();</span>
+<span class="nc" id="L58">        description = event.getDescription();</span>
+<span class="nc" id="L59">        summary = event.getSummary();</span>
+<span class="nc" id="L60">        startDate = event.getStartDate();</span>
+<span class="nc" id="L61">        endDate = event.getEndDate();</span>
+
+<span class="nc" id="L63">        EventCreateResponse eventCreateResponse = new EventCreateResponse( id, type, name, description, summary, startDate, endDate );</span>
+
+<span class="nc" id="L65">        return eventCreateResponse;</span>
+    }
+
+    @Override
+    public EventGetResponse toGetResponse(Event event) {
+<span class="nc bnc" id="L70" title="All 2 branches missed.">        if ( event == null ) {</span>
+<span class="nc" id="L71">            return null;</span>
+        }
+
+<span class="nc" id="L74">        Long id = null;</span>
+<span class="nc" id="L75">        EventType type = null;</span>
+<span class="nc" id="L76">        String name = null;</span>
+<span class="nc" id="L77">        String description = null;</span>
+<span class="nc" id="L78">        String summary = null;</span>
+<span class="nc" id="L79">        Instant startDate = null;</span>
+<span class="nc" id="L80">        Instant endDate = null;</span>
+
+<span class="nc" id="L82">        id = event.getId();</span>
+<span class="nc" id="L83">        type = event.getType();</span>
+<span class="nc" id="L84">        name = event.getName();</span>
+<span class="nc" id="L85">        description = event.getDescription();</span>
+<span class="nc" id="L86">        summary = event.getSummary();</span>
+<span class="nc" id="L87">        startDate = event.getStartDate();</span>
+<span class="nc" id="L88">        endDate = event.getEndDate();</span>
+
+<span class="nc" id="L90">        EventGetResponse eventGetResponse = new EventGetResponse( id, type, name, description, summary, startDate, endDate );</span>
+
+<span class="nc" id="L92">        return eventGetResponse;</span>
+    }
+
+    @Override
+    public EventSearchResponse toSearchResponse(Event event) {
+<span class="nc bnc" id="L97" title="All 2 branches missed.">        if ( event == null ) {</span>
+<span class="nc" id="L98">            return null;</span>
+        }
+
+<span class="nc" id="L101">        Long id = null;</span>
+<span class="nc" id="L102">        String type = null;</span>
+<span class="nc" id="L103">        String name = null;</span>
+<span class="nc" id="L104">        Instant startDate = null;</span>
+<span class="nc" id="L105">        Instant endDate = null;</span>
+
+<span class="nc" id="L107">        id = event.getId();</span>
+<span class="nc bnc" id="L108" title="All 2 branches missed.">        if ( event.getType() != null ) {</span>
+<span class="nc" id="L109">            type = event.getType().name();</span>
+        }
+<span class="nc" id="L111">        name = event.getName();</span>
+<span class="nc" id="L112">        startDate = event.getStartDate();</span>
+<span class="nc" id="L113">        endDate = event.getEndDate();</span>
+
+<span class="nc" id="L115">        EventSearchResponse eventSearchResponse = new EventSearchResponse( id, type, name, startDate, endDate );</span>
+
+<span class="nc" id="L117">        return eventSearchResponse;</span>
+    }
+
+    @Override
+    public EventUpdateResponse toUpdateResponse(Event event) {
+<span class="nc bnc" id="L122" title="All 2 branches missed.">        if ( event == null ) {</span>
+<span class="nc" id="L123">            return null;</span>
+        }
+
+<span class="nc" id="L126">        Long id = null;</span>
+<span class="nc" id="L127">        EventType type = null;</span>
+<span class="nc" id="L128">        String name = null;</span>
+<span class="nc" id="L129">        String description = null;</span>
+<span class="nc" id="L130">        String summary = null;</span>
+<span class="nc" id="L131">        Instant startDate = null;</span>
+<span class="nc" id="L132">        Instant endDate = null;</span>
+
+<span class="nc" id="L134">        id = event.getId();</span>
+<span class="nc" id="L135">        type = event.getType();</span>
+<span class="nc" id="L136">        name = event.getName();</span>
+<span class="nc" id="L137">        description = event.getDescription();</span>
+<span class="nc" id="L138">        summary = event.getSummary();</span>
+<span class="nc" id="L139">        startDate = event.getStartDate();</span>
+<span class="nc" id="L140">        endDate = event.getEndDate();</span>
+
+<span class="nc" id="L142">        EventUpdateResponse eventUpdateResponse = new EventUpdateResponse( id, type, name, description, summary, startDate, endDate );</span>
+
+<span class="nc" id="L144">        return eventUpdateResponse;</span>
+    }
+
+    @Override
+    public void updateEntity(Event event, EventUpdateRequest request) {
+<span class="nc bnc" id="L149" title="All 2 branches missed.">        if ( request == null ) {</span>
+<span class="nc" id="L150">            return;</span>
+        }
+
+<span class="nc bnc" id="L153" title="All 2 branches missed.">        if ( request.type() != null ) {</span>
+<span class="nc" id="L154">            event.setType( request.type() );</span>
+        }
+<span class="nc bnc" id="L156" title="All 2 branches missed.">        if ( request.name() != null ) {</span>
+<span class="nc" id="L157">            event.setName( request.name() );</span>
+        }
+<span class="nc bnc" id="L159" title="All 2 branches missed.">        if ( request.description() != null ) {</span>
+<span class="nc" id="L160">            event.setDescription( request.description() );</span>
+        }
+<span class="nc bnc" id="L162" title="All 2 branches missed.">        if ( request.summary() != null ) {</span>
+<span class="nc" id="L163">            event.setSummary( request.summary() );</span>
+        }
+<span class="nc bnc" id="L165" title="All 2 branches missed.">        if ( request.startDate() != null ) {</span>
+<span class="nc" id="L166">            event.setStartDate( request.startDate() );</span>
+        }
+<span class="nc bnc" id="L168" title="All 2 branches missed.">        if ( request.endDate() != null ) {</span>
+<span class="nc" id="L169">            event.setEndDate( request.endDate() );</span>
+        }
+<span class="nc" id="L171">    }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>
